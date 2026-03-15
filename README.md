@@ -1,6 +1,12 @@
-#################################
-#####FOREST_PLOT#################
-#################################
+library(dplyr)
+library(broom)
+library(ggplot2)
+library(patchwork)
+
+############################################################
+### 1) REFIT MODELS
+############################################################
+
 df_liver_adj_forest <- df_liver %>%
   filter(
     !is.na(age),
@@ -47,9 +53,17 @@ cox_lancet_stage_adj_fp <- coxph(
   data = df_liver_adj_forest
 )
 
+############################################################
+### 2) HELPER
+############################################################
+
 fmt_hr <- function(est, low, high){
   sprintf("%.2f (%.2f–%.2f)", est, low, high)
 }
+
+############################################################
+### 3) EXTRACT HR
+############################################################
 
 bmi_unadj <- tidy(cox_bmi_unadj_fp, exponentiate = TRUE, conf.int = TRUE) %>%
   filter(grepl("^bmi_binary", term)) %>%
@@ -117,6 +131,10 @@ lancet_stage_adj <- tidy(cox_lancet_stage_adj_fp, exponentiate = TRUE, conf.int 
             low_adj = conf.low,
             high_adj = conf.high)
 
+############################################################
+### 4) FOREST DATAFRAME
+############################################################
+
 forest_df <- tibble(
   definition = c(
     "BMI-based obesity", "BMI-based obesity",
@@ -137,21 +155,25 @@ forest_df <- tibble(
   rows_update(lancet_stage_unadj, by=c("definition","category")) %>%
   rows_update(lancet_stage_adj, by=c("definition","category"))
 
+############################################################
+### 5) LEFT PANEL (BIGGER TEXT)
+############################################################
+
 left_df <- forest_df %>%
   mutate(
     def_display = ifelse(category=="No obesity",definition,""),
     cat_display = category,
     hr_unadj_display = ifelse(category=="No obesity","Reference",
-                              fmt_hr(est_unadj,low_unadj,high_unadj)),
+                             fmt_hr(est_unadj,low_unadj,high_unadj)),
     hr_adj_display = ifelse(category=="No obesity","Reference",
-                            fmt_hr(est_adj,low_adj,high_adj))
+                           fmt_hr(est_adj,low_adj,high_adj))
   )
 
 p_left <- ggplot(left_df, aes(y=y)) +
   xlim(0,1) +
   ylim(0.7,6.2) +
   theme_void() +
-  
+
   annotate("text",x=0.00,y=6.05,label="Definition",
            hjust=0,fontface="bold",size=4.2) +
   annotate("text",x=0.33,y=6.05,label="Category",
@@ -160,7 +182,7 @@ p_left <- ggplot(left_df, aes(y=y)) +
            hjust=0,fontface="bold",size=4.2) +
   annotate("text",x=0.83,y=6.05,label="Adjusted HR (95% CI)",
            hjust=0,fontface="bold",size=4.2) +
-  
+
   geom_text(aes(x=0.00,label=def_display),
             hjust=0,size=4,fontface="bold") +
   geom_text(aes(x=0.33,label=cat_display),
@@ -170,11 +192,15 @@ p_left <- ggplot(left_df, aes(y=y)) +
   geom_text(aes(x=0.83,label=hr_adj_display),
             hjust=0,size=4)
 
+############################################################
+### 6) RIGHT PANEL
+############################################################
+
 p_right <- ggplot(forest_df,aes(y=y)) +
-  
+
   geom_vline(xintercept=1,linetype="dashed",
              colour="grey40",linewidth=0.7) +
-  
+
   geom_errorbarh(
     data=forest_df %>% filter(!is.na(est_unadj)),
     aes(xmin=low_unadj,xmax=high_unadj,color="Unadjusted"),
@@ -187,7 +213,7 @@ p_right <- ggplot(forest_df,aes(y=y)) +
     size=3.8,
     position=position_nudge(y=0.10)
   ) +
-  
+
   geom_errorbarh(
     data=forest_df %>% filter(!is.na(est_adj)),
     aes(xmin=low_adj,xmax=high_adj,color="Adjusted"),
@@ -200,29 +226,29 @@ p_right <- ggplot(forest_df,aes(y=y)) +
     size=3.8,
     position=position_nudge(y=-0.10)
   ) +
-  
+
   scale_color_manual(
     values=c("Unadjusted"="grey45","Adjusted"="#D18F00")
   ) +
-  
+
   scale_x_continuous(
     trans="log10",
     breaks=c(0.5,1,2,3),
     limits=c(0.5,3),
     labels=c("0.5","1","2","3")
   ) +
-  
+
   scale_y_continuous(
     breaks=forest_df$y,
     labels=rep("",nrow(forest_df)),
     limits=c(0.7,6.2)
   ) +
-  
+
   labs(x="Hazard ratio (95% CI), log scale",
        y=NULL,color=NULL) +
-  
+
   theme_classic(base_size=12) +
-  
+
   theme(
     legend.position=c(0.82,0.90),
     legend.background=element_rect(color="grey70",fill="white"),
@@ -231,6 +257,10 @@ p_right <- ggplot(forest_df,aes(y=y)) +
     axis.text.y=element_blank(),
     axis.ticks.y=element_blank()
   )
+
+############################################################
+### 7) FINAL FIGURE
+############################################################
 
 p_final <- p_left + p_right +
   plot_layout(widths=c(2.8,1.35))
@@ -244,4 +274,3 @@ ggsave(
 )
 
 p_final
-
