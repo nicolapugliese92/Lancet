@@ -1,253 +1,247 @@
-##KAPLAN_LIVER##
-############################################################
-### 1) CHECK FACTORS
-############################################################
-
-df_liver$bmi_binary <- factor(
-  df_liver$bmi_binary,
-  levels = c("Non-obesity", "Obesity")
-)
-
-df_liver$lancet_binary <- factor(
-  df_liver$lancet_binary,
-  levels = c("Non-obesity", "Obesity")
-)
-
-df_liver$lancet_stage <- factor(
-  df_liver$lancet_stage,
-  levels = c("No obesity", "Preclinical obesity", "Clinical obesity")
-)
-
-############################################################
-### 2) COMMON SETTINGS
-############################################################
-
-x_max <- 15
-x_breaks <- seq(0, 15, 3)
-
-km_theme <- theme_classic(base_size = 15) +
-  theme(
-    legend.position = "top",
-    legend.title = element_blank(),
-    legend.text = element_text(size = 12, color = "black"),
-    axis.title = element_text(size = 14, color = "black"),
-    axis.text = element_text(size = 12, color = "black"),
-    plot.title = element_blank(),
-    panel.grid = element_blank()
+#################################
+#####FOREST_PLOT#################
+#################################
+df_liver_adj_forest <- df_liver %>%
+  filter(
+    !is.na(age),
+    !is.na(sex),
+    !is.na(smoking),
+    !is.na(alcohol_g_day),
+    !is.na(followup_liver),
+    !is.na(event),
+    !is.na(bmi_binary),
+    !is.na(lancet_binary),
+    !is.na(lancet_stage)
   )
 
-risk_theme <- theme_classic(base_size = 13) +
-  theme(
-    panel.grid = element_blank(),
-    axis.title.y = element_blank(),
-    axis.ticks.y = element_blank(),
-    legend.position = "none",
-    text = element_text(color = "black"),
-    axis.text.x = element_text(color = "black"),
-    axis.title.x = element_blank()
-  )
-
-############################################################
-### 3) KM 1 — BMI-BASED OBESITY
-############################################################
-
-fit_bmi <- survfit(
+cox_bmi_unadj_fp <- coxph(
   Surv(followup_liver, event) ~ bmi_binary,
   data = df_liver
 )
 
-p_bmi <- ggsurvplot(
-  fit_bmi,
-  data = df_liver,
-  fun = "event",
-  conf.int = TRUE,
-  conf.int.alpha = 0.15,
-  censor = FALSE,
-  risk.table = TRUE,
-  risk.table.title = "Number at risk",
-  risk.table.y.text = TRUE,
-  risk.table.y.text.col = TRUE,
-  pval = TRUE,
-  pval.method = FALSE,
-  legend.title = "",
-  legend.labs = c("Non-obesity", "Obesity"),
-  palette = c("grey50", "#1F77B4"),
-  xlab = "Follow-up (years)",
-  ylab = "Cumulative incidence of liver-related events (%)",
-  break.time.by = 3,
-  xlim = c(0, 15),
-  risk.table.height = 0.22,
-  ggtheme = km_theme
+cox_bmi_adj_fp <- coxph(
+  Surv(followup_liver, event) ~
+    bmi_binary + age + sex + smoking + alcohol_g_day,
+  data = df_liver_adj_forest
 )
 
-p_bmi$plot <- p_bmi$plot +
-  scale_x_continuous(breaks = x_breaks, limits = c(0, 15)) +
-  scale_y_continuous(
-    labels = label_percent(accuracy = 0.1),
-    limits = c(0, 0.03)
-  ) +
-  theme(legend.position = "top")
-
-p_bmi$table <- p_bmi$table +
-  scale_x_continuous(breaks = x_breaks, limits = c(0, 15)) +
-  risk_theme
-
-############################################################
-### 4) KM 2 — LANCET CRITERIA-BASED OBESITY
-############################################################
-
-fit_lancet_bin <- survfit(
+cox_lancet_bin_unadj_fp <- coxph(
   Surv(followup_liver, event) ~ lancet_binary,
   data = df_liver
 )
 
-p_lancet_bin <- ggsurvplot(
-  fit_lancet_bin,
-  data = df_liver,
-  fun = "event",
-  conf.int = TRUE,
-  conf.int.alpha = 0.15,
-  censor = FALSE,
-  risk.table = TRUE,
-  risk.table.title = "Number at risk",
-  risk.table.y.text = TRUE,
-  risk.table.y.text.col = TRUE,
-  pval = TRUE,
-  pval.method = FALSE,
-  legend.title = "",
-  legend.labs = c("Non-obesity", "Obesity"),
-  palette = c("grey50", "#1F77B4"),
-  xlab = "Follow-up (years)",
-  ylab = "Cumulative incidence of liver-related events (%)",
-  break.time.by = 3,
-  xlim = c(0, 15),
-  risk.table.height = 0.22,
-  ggtheme = km_theme
+cox_lancet_bin_adj_fp <- coxph(
+  Surv(followup_liver, event) ~
+    lancet_binary + age + sex + smoking + alcohol_g_day,
+  data = df_liver_adj_forest
 )
 
-p_lancet_bin$plot <- p_lancet_bin$plot +
-  scale_x_continuous(breaks = x_breaks, limits = c(0, 15)) +
-  scale_y_continuous(
-    labels = label_percent(accuracy = 0.1),
-    limits = c(0, 0.03)
-  ) +
-  theme(legend.position = "top")
-
-p_lancet_bin$table <- p_lancet_bin$table +
-  scale_x_continuous(breaks = x_breaks, limits = c(0, 15)) +
-  risk_theme
-
-############################################################
-### 5) KM 3 — LANCET STAGING
-############################################################
-
-fit_lancet_stage <- survfit(
+cox_lancet_stage_unadj_fp <- coxph(
   Surv(followup_liver, event) ~ lancet_stage,
   data = df_liver
 )
 
-p_lancet_stage <- ggsurvplot(
-  fit_lancet_stage,
-  data = df_liver,
-  fun = "event",
-  conf.int = TRUE,
-  conf.int.alpha = 0.15,
-  censor = FALSE,
-  risk.table = TRUE,
-  risk.table.title = "Number at risk",
-  risk.table.y.text = TRUE,
-  risk.table.y.text.col = TRUE,
-  pval = TRUE,
-  pval.method = FALSE,
-  legend.title = "",
-  legend.labs = c("No obesity", "Preclinical obesity", "Clinical obesity"),
-  palette = c("grey50", "#FFC300", "#A93226"),
-  xlab = "Follow-up (years)",
-  ylab = "Cumulative incidence of liver-related events (%)",
-  break.time.by = 3,
-  xlim = c(0, 15),
-  risk.table.height = 0.22,
-  ggtheme = km_theme
+cox_lancet_stage_adj_fp <- coxph(
+  Surv(followup_liver, event) ~
+    lancet_stage + age + sex + smoking + alcohol_g_day,
+  data = df_liver_adj_forest
 )
 
-p_lancet_stage$plot <- p_lancet_stage$plot +
-  scale_x_continuous(breaks = x_breaks, limits = c(0, 15)) +
-  scale_y_continuous(
-    labels = label_percent(accuracy = 0.1),
-    limits = c(0, 0.03)
+fmt_hr <- function(est, low, high){
+  sprintf("%.2f (%.2f–%.2f)", est, low, high)
+}
+
+bmi_unadj <- tidy(cox_bmi_unadj_fp, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(grepl("^bmi_binary", term)) %>%
+  mutate(
+    definition = "BMI-based obesity",
+    category = "Obesity"
+  ) %>%
+  transmute(definition, category,
+            est_unadj = estimate,
+            low_unadj = conf.low,
+            high_unadj = conf.high)
+
+bmi_adj <- tidy(cox_bmi_adj_fp, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(grepl("^bmi_binary", term)) %>%
+  mutate(
+    definition = "BMI-based obesity",
+    category = "Obesity"
+  ) %>%
+  transmute(definition, category,
+            est_adj = estimate,
+            low_adj = conf.low,
+            high_adj = conf.high)
+
+lancet_bin_unadj <- tidy(cox_lancet_bin_unadj_fp, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(grepl("^lancet_binary", term)) %>%
+  mutate(
+    definition = "Lancet criteria-based obesity",
+    category = "Obesity"
+  ) %>%
+  transmute(definition, category,
+            est_unadj = estimate,
+            low_unadj = conf.low,
+            high_unadj = conf.high)
+
+lancet_bin_adj <- tidy(cox_lancet_bin_adj_fp, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(grepl("^lancet_binary", term)) %>%
+  mutate(
+    definition = "Lancet criteria-based obesity",
+    category = "Obesity"
+  ) %>%
+  transmute(definition, category,
+            est_adj = estimate,
+            low_adj = conf.low,
+            high_adj = conf.high)
+
+lancet_stage_unadj <- tidy(cox_lancet_stage_unadj_fp, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(grepl("^lancet_stage", term)) %>%
+  mutate(
+    definition = "Lancet obesity staging",
+    category = c("Preclinical obesity", "Clinical obesity")
+  ) %>%
+  transmute(definition, category,
+            est_unadj = estimate,
+            low_unadj = conf.low,
+            high_unadj = conf.high)
+
+lancet_stage_adj <- tidy(cox_lancet_stage_adj_fp, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(grepl("^lancet_stage", term)) %>%
+  mutate(
+    definition = "Lancet obesity staging",
+    category = c("Preclinical obesity", "Clinical obesity")
+  ) %>%
+  transmute(definition, category,
+            est_adj = estimate,
+            low_adj = conf.low,
+            high_adj = conf.high)
+
+forest_df <- tibble(
+  definition = c(
+    "BMI-based obesity", "BMI-based obesity",
+    "Lancet criteria-based obesity", "Lancet criteria-based obesity",
+    "Lancet obesity staging", "Lancet obesity staging", "Lancet obesity staging"
+  ),
+  category = c(
+    "No obesity", "Obesity",
+    "No obesity", "Obesity",
+    "No obesity", "Preclinical obesity", "Clinical obesity"
+  ),
+  y = c(5.6, 4.9, 4.0, 3.3, 2.4, 1.7, 1.0)
+) %>%
+  left_join(bmi_unadj, by=c("definition","category")) %>%
+  left_join(bmi_adj, by=c("definition","category")) %>%
+  rows_update(lancet_bin_unadj, by=c("definition","category")) %>%
+  rows_update(lancet_bin_adj, by=c("definition","category")) %>%
+  rows_update(lancet_stage_unadj, by=c("definition","category")) %>%
+  rows_update(lancet_stage_adj, by=c("definition","category"))
+
+left_df <- forest_df %>%
+  mutate(
+    def_display = ifelse(category=="No obesity",definition,""),
+    cat_display = category,
+    hr_unadj_display = ifelse(category=="No obesity","Reference",
+                              fmt_hr(est_unadj,low_unadj,high_unadj)),
+    hr_adj_display = ifelse(category=="No obesity","Reference",
+                            fmt_hr(est_adj,low_adj,high_adj))
+  )
+
+p_left <- ggplot(left_df, aes(y=y)) +
+  xlim(0,1) +
+  ylim(0.7,6.2) +
+  theme_void() +
+  
+  annotate("text",x=0.00,y=6.05,label="Definition",
+           hjust=0,fontface="bold",size=4.2) +
+  annotate("text",x=0.33,y=6.05,label="Category",
+           hjust=0,fontface="bold",size=4.2) +
+  annotate("text",x=0.58,y=6.05,label="Unadjusted HR (95% CI)",
+           hjust=0,fontface="bold",size=4.2) +
+  annotate("text",x=0.83,y=6.05,label="Adjusted HR (95% CI)",
+           hjust=0,fontface="bold",size=4.2) +
+  
+  geom_text(aes(x=0.00,label=def_display),
+            hjust=0,size=4,fontface="bold") +
+  geom_text(aes(x=0.33,label=cat_display),
+            hjust=0,size=4) +
+  geom_text(aes(x=0.58,label=hr_unadj_display),
+            hjust=0,size=4) +
+  geom_text(aes(x=0.83,label=hr_adj_display),
+            hjust=0,size=4)
+
+p_right <- ggplot(forest_df,aes(y=y)) +
+  
+  geom_vline(xintercept=1,linetype="dashed",
+             colour="grey40",linewidth=0.7) +
+  
+  geom_errorbarh(
+    data=forest_df %>% filter(!is.na(est_unadj)),
+    aes(xmin=low_unadj,xmax=high_unadj,color="Unadjusted"),
+    height=0.08,linewidth=1.1,
+    position=position_nudge(y=0.10)
   ) +
-  theme(legend.position = "top")
+  geom_point(
+    data=forest_df %>% filter(!is.na(est_unadj)),
+    aes(x=est_unadj,color="Unadjusted"),
+    size=3.8,
+    position=position_nudge(y=0.10)
+  ) +
+  
+  geom_errorbarh(
+    data=forest_df %>% filter(!is.na(est_adj)),
+    aes(xmin=low_adj,xmax=high_adj,color="Adjusted"),
+    height=0.08,linewidth=1.1,
+    position=position_nudge(y=-0.10)
+  ) +
+  geom_point(
+    data=forest_df %>% filter(!is.na(est_adj)),
+    aes(x=est_adj,color="Adjusted"),
+    size=3.8,
+    position=position_nudge(y=-0.10)
+  ) +
+  
+  scale_color_manual(
+    values=c("Unadjusted"="grey45","Adjusted"="#D18F00")
+  ) +
+  
+  scale_x_continuous(
+    trans="log10",
+    breaks=c(0.5,1,2,3),
+    limits=c(0.5,3),
+    labels=c("0.5","1","2","3")
+  ) +
+  
+  scale_y_continuous(
+    breaks=forest_df$y,
+    labels=rep("",nrow(forest_df)),
+    limits=c(0.7,6.2)
+  ) +
+  
+  labs(x="Hazard ratio (95% CI), log scale",
+       y=NULL,color=NULL) +
+  
+  theme_classic(base_size=12) +
+  
+  theme(
+    legend.position=c(0.82,0.90),
+    legend.background=element_rect(color="grey70",fill="white"),
+    legend.text=element_text(size=12),
+    legend.key.size=unit(1.3,"lines"),
+    axis.text.y=element_blank(),
+    axis.ticks.y=element_blank()
+  )
 
-p_lancet_stage$table <- p_lancet_stage$table +
-  scale_x_continuous(breaks = x_breaks, limits = c(0, 15)) +
-  risk_theme
-
-############################################################
-### 6) PRINT
-############################################################
-
-print(p_bmi)
-print(p_lancet_bin)
-print(p_lancet_stage)
-
-############################################################
-### 7) SAVE COMPLETE FIGURES (PLOT + RISK TABLE)
-############################################################
-
-bmi_full <- arrange_ggsurvplots(list(p_bmi), print = FALSE)
-lancet_bin_full <- arrange_ggsurvplots(list(p_lancet_bin), print = FALSE)
-lancet_stage_full <- arrange_ggsurvplots(list(p_lancet_stage), print = FALSE)
-
-ggsave(
-  filename = "C:/Users/nicol/Desktop/KM_liver_BMI_binary_full.png",
-  plot = bmi_full,
-  width = 10,
-  height = 8,
-  dpi = 400
-)
-
-ggsave(
-  filename = "C:/Users/nicol/Desktop/KM_liver_Lancet_binary_full.png",
-  plot = lancet_bin_full,
-  width = 10,
-  height = 8,
-  dpi = 400
-)
-
-ggsave(
-  filename = "C:/Users/nicol/Desktop/KM_liver_Lancet_stage_full.png",
-  plot = lancet_stage_full,
-  width = 10,
-  height = 8,
-  dpi = 400
-)
-
-############################################################
-### 8) OPTIONAL: SAVE MAIN PLOTS ONLY
-############################################################
-
-ggsave(
-  filename = "C:/Users/nicol/Desktop/KM_liver_BMI_binary_plot_only.png",
-  plot = p_bmi$plot,
-  width = 8,
-  height = 6,
-  dpi = 400
-)
+p_final <- p_left + p_right +
+  plot_layout(widths=c(2.8,1.35))
 
 ggsave(
-  filename = "C:/Users/nicol/Desktop/KM_liver_Lancet_binary_plot_only.png",
-  plot = p_lancet_bin$plot,
-  width = 8,
-  height = 6,
-  dpi = 400
+  "forest_plot_liver_models_final.png",
+  p_final,
+  width=14,
+  height=4.5,
+  dpi=400
 )
 
-ggsave(
-  filename = "C:/Users/nicol/Desktop/KM_liver_Lancet_stage_plot_only.png",
-  plot = p_lancet_stage$plot,
-  width = 8,
-  height = 6,
-  dpi = 400
-)
-
+p_final
 
